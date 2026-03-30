@@ -1,0 +1,131 @@
+# ╔══════════════════════════════════════════════════════════════════════╗
+# ║  OpenFang — Dokploy Docker Compose Deployment                      ║
+# ║  Deploy on Dokploy: Project → Create Service → Compose (Raw/Git)   ║
+# ╚══════════════════════════════════════════════════════════════════════╝
+#
+# HƯỚNG DẪN DEPLOY TRÊN DOKPLOY:
+# ─────────────────────────────────
+# 1. Đăng nhập Dokploy Dashboard
+# 2. Tạo Project mới (VD: "openfang")
+# 3. Trong Project → Create Service → chọn "Compose"
+# 4. Chọn source:
+#    - "Raw": Copy toàn bộ nội dung file này paste vào
+#    - "Git": Trỏ đến repo, branch, và path file này
+# 5. Vào tab "Environment" → thêm các biến môi trường cần thiết
+#    (xem phần environment bên dưới)
+# 6. Vào tab "Domains" → thêm domain và bật HTTPS (Let's Encrypt)
+#    - Service Name: openfang
+#    - Container Port: 4200
+# 7. Nhấn "Deploy"
+#
+# LƯU Ý QUAN TRỌNG CHO DOKPLOY:
+# ─────────────────────────────────
+# - KHÔNG dùng container_name (Dokploy quản lý tên container)
+# - Dùng named volumes thay vì bind mounts (hỗ trợ backup tự động)
+# - Thêm dokploy-network để Traefik routing chính xác
+# - Environment variables nên quản lý qua Dokploy UI (tab Environment)
+#   thay vì hardcode trong file này
+#
+
+version: "3.8"
+
+services:
+  # ─── OpenFang Agent OS ──────────────────────────────────────────────
+  openfang:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Nếu đã có image trên GHCR (khi public):
+    # image: ghcr.io/rightnow-ai/openfang:latest
+
+    # Port binding — Dokploy sẽ route qua Traefik reverse proxy
+    # Khi dùng domain trên Dokploy, port này không cần expose ra host
+    # Chỉ cần expose để Traefik trong mạng nội bộ truy cập được
+    expose:
+      - "4200"
+    # Nếu muốn truy cập trực tiếp qua IP:port (không qua domain):
+    # ports:
+    #   - "4200:4200"
+
+    # ─── Volumes (Named volumes cho Dokploy backup) ─────────────────
+    volumes:
+      # Data chính: SQLite DB, agent state, memory, sessions
+      - openfang-data:/data
+      # Config file (optional): mount config.toml riêng nếu cần
+      # - openfang-config:/data/config
+
+    # ─── Environment Variables ──────────────────────────────────────
+    # KHUYẾN NGHỊ: Quản lý qua Dokploy UI → tab "Environment"
+    # Chỉ liệt kê ở đây cho tham khảo, giá trị sẽ lấy từ Dokploy env
+    environment:
+      # === OpenFang Core ===
+      OPENFANG_HOME: /data
+      # Bind 0.0.0.0 để container nhận traffic từ Traefik
+      OPENFANG_LISTEN: "0.0.0.0:4200"
+      # API key bảo vệ HTTP endpoints (BẮT BUỘC khi deploy public)
+      OPENFANG_API_KEY: ${OPENFANG_API_KEY:-}
+      # Log level
+      RUST_LOG: ${RUST_LOG:-info}
+
+      # === LLM Provider API Keys (chỉ set provider bạn dùng) ===
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      TOGETHER_API_KEY: ${TOGETHER_API_KEY:-}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      FIREWORKS_API_KEY: ${FIREWORKS_API_KEY:-}
+
+      # === Channel Adapters (chỉ set channel bạn dùng) ===
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:-}
+      SLACK_APP_TOKEN: ${SLACK_APP_TOKEN:-}
+      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
+      WHATSAPP_PHONE_ID: ${WHATSAPP_PHONE_ID:-}
+
+    # ─── Health Check ───────────────────────────────────────────────
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4200/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    # ─── Restart Policy ─────────────────────────────────────────────
+    restart: unless-stopped
+
+    # ─── Resource Limits (tùy chỉnh theo server) ────────────────────
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+          cpus: "0.25"
+
+    # ─── Logging ─────────────────────────────────────────────────────
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # ─── Network ─────────────────────────────────────────────────────
+    networks:
+      - dokploy-network
+
+# ─── Named Volumes ─────────────────────────────────────────────────────
+# Dokploy quản lý và hỗ trợ backup tự động cho named volumes
+volumes:
+  openfang-data:
+    driver: local
+
+# ─── Networks ──────────────────────────────────────────────────────────
+# dokploy-network: Traefik reverse proxy network (được Dokploy tạo sẵn)
+networks:
+  dokploy-network:
+    external: true
