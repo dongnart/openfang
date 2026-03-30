@@ -34,7 +34,7 @@ services:
   openfang:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dokploy
     # Nếu đã có image trên GHCR (khi public):
     # image: ghcr.io/rightnow-ai/openfang:latest
 
