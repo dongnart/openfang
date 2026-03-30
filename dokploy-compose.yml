@@ -38,14 +38,8 @@ services:
     # Nếu đã có image trên GHCR (khi public):
     # image: ghcr.io/rightnow-ai/openfang:latest
 
-    # Port binding — Dokploy sẽ route qua Traefik reverse proxy
-    # Khi dùng domain trên Dokploy, port này không cần expose ra host
-    # Chỉ cần expose để Traefik trong mạng nội bộ truy cập được
-    expose:
-      - "50051"
-    # Nếu muốn truy cập trực tiếp qua IP:port (không qua domain):
-    # ports:
-    #   - "50051:50051"
+    ports:
+      - "50051:50051"
 
     # ─── Volumes (Named volumes cho Dokploy backup) ─────────────────
     volumes:
@@ -114,18 +108,8 @@ services:
         max-size: "10m"
         max-file: "3"
 
-    # ─── Network ─────────────────────────────────────────────────────
-    networks:
-      - dokploy-network
-
 # ─── Named Volumes ─────────────────────────────────────────────────────
 # Dokploy quản lý và hỗ trợ backup tự động cho named volumes
 volumes:
   openfang-data:
     driver: local
-
-# ─── Networks ──────────────────────────────────────────────────────────
-# dokploy-network: Traefik reverse proxy network (được Dokploy tạo sẵn)
-networks:
-  dokploy-network:
-    external: true
