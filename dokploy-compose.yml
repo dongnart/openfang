@@ -101,15 +101,23 @@ services:
           memory: 128M
           cpus: "0.25"
 
-    # ─── Logging ─────────────────────────────────────────────────────
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
 
+    # ─── Network (BẮT BUỘC cho Traefik routing) ──────────────────────
+    networks:
+      - dokploy-network
+
 # ─── Named Volumes ─────────────────────────────────────────────────────
-# Dokploy quản lý và hỗ trợ backup tự động cho named volumes
 volumes:
   openfang-data:
     driver: local
+
+# ─── Networks ──────────────────────────────────────────────────────────
+# Traefik cần chung network với container để route traffic
+networks:
+  dokploy-network:
+    external: true
