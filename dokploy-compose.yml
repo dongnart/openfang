@@ -15,7 +15,7 @@
 #    (xem phần environment bên dưới)
 # 6. Vào tab "Domains" → thêm domain và bật HTTPS (Let's Encrypt)
 #    - Service Name: openfang
-#    - Container Port: 4200
+#    - Container Port: 50051
 # 7. Nhấn "Deploy"
 #
 # LƯU Ý QUAN TRỌNG CHO DOKPLOY:
@@ -42,10 +42,10 @@ services:
     # Khi dùng domain trên Dokploy, port này không cần expose ra host
     # Chỉ cần expose để Traefik trong mạng nội bộ truy cập được
     expose:
-      - "4200"
+      - "50051"
     # Nếu muốn truy cập trực tiếp qua IP:port (không qua domain):
     # ports:
-    #   - "4200:4200"
+    #   - "50051:50051"
 
     # ─── Volumes (Named volumes cho Dokploy backup) ─────────────────
     volumes:
@@ -61,7 +61,7 @@ services:
       # === OpenFang Core ===
       OPENFANG_HOME: /data
       # Bind 0.0.0.0 để container nhận traffic từ Traefik
-      OPENFANG_LISTEN: "0.0.0.0:4200"
+      OPENFANG_LISTEN: "0.0.0.0:50051"
       # API key bảo vệ HTTP endpoints (BẮT BUỘC khi deploy public)
       OPENFANG_API_KEY: ${OPENFANG_API_KEY:-}
       # Log level
@@ -88,7 +88,7 @@ services:
 
     # ─── Health Check ───────────────────────────────────────────────
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:4200/api/health"]
+      test: ["CMD", "curl", "-sf", "http://localhost:50051/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
