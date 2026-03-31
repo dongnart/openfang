@@ -71,6 +71,7 @@ services:
       TOGETHER_API_KEY: ${TOGETHER_API_KEY:-}
       MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
       FIREWORKS_API_KEY: ${FIREWORKS_API_KEY:-}
+      MINIMAX_API_KEY: ${MINIMAX_API_KEY:-}
 
       # === Channel Adapters (chỉ set channel bạn dùng) ===
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
