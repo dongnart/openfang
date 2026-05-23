@@ -32,10 +32,14 @@ fn safe_drain_boundary(messages: &[Message], mut boundary: usize) -> usize {
     // is in the last drained message (boundary - 1).  Pull boundary back by 1.
     if messages[boundary].role == Role::User {
         if let MessageContent::Blocks(blocks) = &messages[boundary].content {
-            let has_tool_result = blocks.iter().any(|b| matches!(b, ContentBlock::ToolResult { .. }));
+            let has_tool_result = blocks
+                .iter()
+                .any(|b| matches!(b, ContentBlock::ToolResult { .. }));
             if has_tool_result && boundary > 0 && messages[boundary - 1].role == Role::Assistant {
                 if let MessageContent::Blocks(asst_blocks) = &messages[boundary - 1].content {
-                    let has_tool_use = asst_blocks.iter().any(|b| matches!(b, ContentBlock::ToolUse { .. }));
+                    let has_tool_use = asst_blocks
+                        .iter()
+                        .any(|b| matches!(b, ContentBlock::ToolUse { .. }));
                     if has_tool_use {
                         boundary -= 1;
                         debug!(
@@ -135,7 +139,8 @@ pub fn recover_from_overflow(
             debug!(
                 estimated_tokens = estimated,
                 removing = remove,
-                "Stage 1: moderate trim to last {} messages", messages.len() - remove
+                "Stage 1: moderate trim to last {} messages",
+                messages.len() - remove
             );
             messages.drain(..remove);
             // Re-check after trim
@@ -156,7 +161,8 @@ pub fn recover_from_overflow(
             warn!(
                 estimated_tokens = estimate_tokens(messages, system_prompt, tools),
                 removing = remove,
-                "Stage 2: aggressive overflow compaction to last {} messages", messages.len() - remove
+                "Stage 2: aggressive overflow compaction to last {} messages",
+                messages.len() - remove
             );
             let summary = Message::user(format!(
                 "[System: {} earlier messages were removed due to context overflow. \
@@ -231,6 +237,7 @@ mod tests {
                         Role::Assistant
                     },
                     content: MessageContent::Text(text),
+                    ..Default::default()
                 }
             })
             .collect()
@@ -289,6 +296,7 @@ mod tests {
                     content: big_result.clone(),
                     is_error: false,
                 }]),
+                ..Default::default()
             },
             Message {
                 role: Role::User,
@@ -298,6 +306,7 @@ mod tests {
                     content: big_result,
                     is_error: false,
                 }]),
+                ..Default::default()
             },
         ];
         // Tiny context window to force all stages
@@ -336,6 +345,7 @@ mod tests {
                     content: chinese_result,
                     is_error: false,
                 }]),
+                ..Default::default()
             },
         ];
         // Tiny context window to force stage 3 tool truncation
@@ -359,6 +369,7 @@ mod tests {
                     input: serde_json::json!({}),
                     provider_metadata: None,
                 }]),
+                ..Default::default()
             },
             Message {
                 role: Role::User,
@@ -368,12 +379,16 @@ mod tests {
                     content: "file contents".to_string(),
                     is_error: false,
                 }]),
+                ..Default::default()
             },
             Message::user("thanks"),
         ];
         // Boundary 2 would cut between the assistant(ToolUse) at [1] and user(ToolResult) at [2].
         let adjusted = safe_drain_boundary(&msgs, 2);
-        assert_eq!(adjusted, 1, "Should pull boundary back to keep the ToolUse/ToolResult pair together");
+        assert_eq!(
+            adjusted, 1,
+            "Should pull boundary back to keep the ToolUse/ToolResult pair together"
+        );
     }
 
     #[test]
@@ -385,7 +400,10 @@ mod tests {
             Message::assistant("d"),
         ];
         let adjusted = safe_drain_boundary(&msgs, 2);
-        assert_eq!(adjusted, 2, "Should not change boundary for plain text messages");
+        assert_eq!(
+            adjusted, 2,
+            "Should not change boundary for plain text messages"
+        );
     }
 
     #[test]
